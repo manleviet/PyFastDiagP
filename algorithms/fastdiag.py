@@ -23,8 +23,8 @@ MSS - Maximal Satisfiable Subset
 
 import logging
 
+from checker import checker
 from common import utils
-from src.checker import checker
 
 
 def fastDiag(C: list, B: list) -> list:

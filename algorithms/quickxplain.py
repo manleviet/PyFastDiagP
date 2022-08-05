@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import logging
 
+from checker import checker
 from common import utils
-from src.checker import checker
 
 logging.basicConfig(level=logging.DEBUG)
 

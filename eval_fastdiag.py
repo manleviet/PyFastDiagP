@@ -3,9 +3,9 @@ import logging.config
 import sys
 import time
 
+from algorithms.fastdiag import fastDiag
+from checker.checker import gConsistencyCheckCounter
 from common.utils import prepare_cstrs_sets
-from src.algorithms.quickxplain import quickXplain
-from src.checker.checker import gConsistencyCheckCounter
 
 logging.config.fileConfig('logging.conf')
 
@@ -24,12 +24,12 @@ def main():
     B, C = prepare_cstrs_sets(in_model_filename, in_req_filename)
 
     start_time = time.time()
-    conflict = quickXplain(C, B)
+    diag = fastDiag(C, B)
     total_time = time.time() - start_time
 
     print(in_model_filename + "|" + in_req_filename + "|" + str(total_time) + "|" + str(gConsistencyCheckCounter)
-          + "|" + str(gConsistencyCheckCounter) + "|" + str(0) + "|quickxplain|" + "Choco" + "|" + str(difficulty)
-          + "|" + str(conflict))
+          + "|" + str(gConsistencyCheckCounter) + "|" + str(0) + "|fastdiag|" + "Choco" + "|" + str(difficulty)
+          + "|" + str(diag))
 
 
 if __name__ == '__main__':

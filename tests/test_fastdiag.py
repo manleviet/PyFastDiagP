@@ -7,7 +7,7 @@ from common.utils import prepare_cstrs_sets
 in_model_filename = "../data/tests/test_model.cnf"
 in_req_filename = "../data/tests/test_prod_1.cnf"
 
-config.solver_path = "../apps/choco4solver.jar"
+config.solver_path = "../solver_apps/choco4solver.jar"
 
 
 class AlgorithmTests(unittest.TestCase):
