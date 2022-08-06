@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import logging.config
+# import logging.config
 import sys
 import time
 
@@ -7,7 +7,8 @@ from algorithms import fastdiagp_v2
 from checker import checker
 from common.utils import prepare_cstrs_sets
 
-logging.config.fileConfig('logging.conf')
+
+# logging.config.fileConfig('logging.conf')
 
 
 def main():
@@ -28,7 +29,7 @@ def main():
 
     print(in_req_filename + "|" + str(total_time) + "|" + str(checker.counter_CC)
           + "|" + str(fastdiagp_v2.counter_readyCC) + "|" + str(len(fastdiagp_v2.lookupTable))
-          + "|" + str(fastdiagp_v2.lmax) + "|FastDiagP_V1|" + "|" + str(diag))
+          + "|" + str(fastdiagp_v2.lmax) + "|FastDiagP_V2|" + "|" + str(diag))
 
 
 if __name__ == '__main__':

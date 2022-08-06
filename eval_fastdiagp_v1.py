@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import logging.config
+# import logging.config
 import sys
 import time
 
@@ -7,7 +7,8 @@ from algorithms import fastdiagp_v1
 from checker import checker
 from common.utils import prepare_cstrs_sets
 
-logging.config.fileConfig('logging.conf')
+
+# logging.config.fileConfig('logging.conf')
 
 
 def main():
