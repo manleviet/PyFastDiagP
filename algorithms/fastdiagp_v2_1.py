@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """
-Deep first search approach
-The assumption of inconsistency of B U C is taken into account first.
+Breadth first search approach
+The assumption of consistency of B U C is taken into account first
+
+Limit the number of generated consistency checks to a fixed number of cores.
 """
 
 import logging
@@ -14,6 +16,9 @@ lookupTable = {}
 counter_readyCC = 0
 lmax = 4
 pool = None
+numCores = mp.cpu_count()
+maxNumGenCC = numCores - 1
+currentNumGenCC = 0
 
 solver_path = "solver_apps/choco4solver.jar"
 
@@ -99,11 +104,13 @@ def fd(Δ: list, C: list, B: list) -> list:
 
 
 def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
-    global pool, genhash
+    global pool, genhash, currentNumGenCC
 
     genhash = hashcode = utils.get_hashcode(B + C)
     if not (hashcode in lookupTable):
+        currentNumGenCC = 0 # reset the number of generated consistency checks
         lookahead(C, B, [Δ], 0)
+        print("lookahead finished with {} generated CC".format(currentNumGenCC))
 
     return lookup_CC(hashcode)
 
@@ -118,19 +125,12 @@ def lookup_CC(hashcode: str) -> (bool, float):
     return result.get()
 
 
-def lookahead(C: list, B: list, Δ: list, level: int) -> None:
-    """
-    The implementation of lookahead algorithm.
-    :param C:
-    :param B:
-    :param Δ:
-    :param level:
-    """
-    global lookupTable, pool, genhash
+def lookahead(C, B, Δ, level):
+    global lookupTable, pool, genhash, currentNumGenCC
 
     logging.debug(">>> lookahead [l={}, Δ={}, C={}, B={}]".format(level, Δ, C, B))
 
-    if level < lmax:
+    if currentNumGenCC < maxNumGenCC:
         BwithC = B + C
 
         if genhash == "":
@@ -140,34 +140,11 @@ def lookahead(C: list, B: list, Δ: list, level: int) -> None:
             genhash = ""
 
         if not (hashcode in lookupTable):
+            currentNumGenCC = currentNumGenCC + 1
             future = pool.apply_async(checker.is_consistent, args=([BwithC, solver_path]))
             lookupTable.update({hashcode: future})
 
             logging.debug(">>> addCC [l={}, C={}]".format(level, hashcode))
-
-        # B U C assumed inconsistent
-        if len(C) > 1:  # case 1.1
-            Cl, Cr = utils.split(C)
-            Δ_prime = Δ.copy()
-            Δ_prime.insert(0, Cr)
-
-            # LookAhead(Cl, B, Cr U Δ, l + 1)
-            lookahead(Cl, B, Δ_prime, level + 1)
-        elif len(C) == 1 and len(Δ) >= 1 and len(Δ[0]) == 1:  # case 1.2
-            Δ1 = Δ[0]
-            Δ_prime = Δ.copy()
-            del Δ_prime[0]
-
-            # LookAhead(Δ1, B, Δ \ {Δ1}, l + 1)
-            lookahead(Δ1, B, Δ_prime, level + 1)
-        elif len(C) == 1 and len(Δ) >= 1 and len(Δ[0]) > 1:  # case 1.3
-            Δ1l, Δ1r = utils.split(Δ[0])
-            Δ_prime = Δ.copy()
-            del Δ_prime[0]
-            Δ_prime.insert(0, Δ1r)
-
-            # LookAhead(Δ1l, B, Δ1r U (Δ \ {Δ1})), l + 1)
-            lookahead(Δ1l, B, Δ_prime, level + 1)
 
         # B U C assumed consistent
         if len(Δ) > 1:  # and len(Δ[0]) == 1:
@@ -196,3 +173,27 @@ def lookahead(C: list, B: list, Δ: list, level: int) -> None:
 
             # LookAhead(Δ1l, B U C, Δ1r U (Δ \ {Δ1})), l + 1)
             lookahead(Δ1l, BwithC, Δ_prime, level + 1)
+
+        # B U C assumed inconsistent
+        if len(C) > 1:  # case 1.1
+            Cl, Cr = utils.split(C)
+            Δ_prime = Δ.copy()
+            Δ_prime.insert(0, Cr)
+
+            # LookAhead(Cl, B, Cr U Δ, l + 1)
+            lookahead(Cl, B, Δ_prime, level + 1)
+        elif len(C) == 1 and len(Δ) >= 1 and len(Δ[0]) == 1:  # case 1.2
+            Δ1 = Δ[0]
+            Δ_prime = Δ.copy()
+            del Δ_prime[0]
+
+            # LookAhead(Δ1, B, Δ \ {Δ1}, l + 1)
+            lookahead(Δ1, B, Δ_prime, level + 1)
+        elif len(C) == 1 and len(Δ) >= 1 and len(Δ[0]) > 1:  # case 1.3
+            Δ1l, Δ1r = utils.split(Δ[0])
+            Δ_prime = Δ.copy()
+            del Δ_prime[0]
+            Δ_prime.insert(0, Δ1r)
+
+            # LookAhead(Δ1l, B, Δ1r U (Δ \ {Δ1})), l + 1)
+            lookahead(Δ1l, B, Δ_prime, level + 1)

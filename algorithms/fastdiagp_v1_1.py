@@ -2,6 +2,8 @@
 """
 Deep first search approach
 The assumption of inconsistency of B U C is taken into account first.
+
+Limit the number of generated consistency checks to a fixed number of cores.
 """
 
 import logging
@@ -14,6 +16,9 @@ lookupTable = {}
 counter_readyCC = 0
 lmax = 4
 pool = None
+numCores = mp.cpu_count()
+maxNumGenCC = numCores - 1
+currentNumGenCC = 0
 
 solver_path = "solver_apps/choco4solver.jar"
 
@@ -99,11 +104,13 @@ def fd(Δ: list, C: list, B: list) -> list:
 
 
 def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
-    global pool, genhash
+    global pool, genhash, currentNumGenCC
 
     genhash = hashcode = utils.get_hashcode(B + C)
     if not (hashcode in lookupTable):
+        currentNumGenCC = 0
         lookahead(C, B, [Δ], 0)
+        print("lookahead finished with {} generated CC".format(currentNumGenCC))
 
     return lookup_CC(hashcode)
 
@@ -126,11 +133,11 @@ def lookahead(C: list, B: list, Δ: list, level: int) -> None:
     :param Δ:
     :param level:
     """
-    global lookupTable, pool, genhash
+    global lookupTable, pool, genhash, currentNumGenCC
 
     logging.debug(">>> lookahead [l={}, Δ={}, C={}, B={}]".format(level, Δ, C, B))
 
-    if level < lmax:
+    if currentNumGenCC < maxNumGenCC:
         BwithC = B + C
 
         if genhash == "":
@@ -140,6 +147,7 @@ def lookahead(C: list, B: list, Δ: list, level: int) -> None:
             genhash = ""
 
         if not (hashcode in lookupTable):
+            currentNumGenCC = currentNumGenCC + 1
             future = pool.apply_async(checker.is_consistent, args=([BwithC, solver_path]))
             lookupTable.update({hashcode: future})
 

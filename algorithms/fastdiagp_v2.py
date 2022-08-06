@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+"""
+Breadth first search approach
+The assumption of consistency of B U C is taken into account first
+"""
+
 import logging
 import multiprocessing as mp
 
@@ -108,7 +113,7 @@ def lookup_CC(hashcode: str) -> (bool, float):
 
     result = lookupTable.get(hashcode)
 
-    if result.ready():  # result is not None and
+    if result.ready():
         counter_readyCC = counter_readyCC + 1
     return result.get()
 

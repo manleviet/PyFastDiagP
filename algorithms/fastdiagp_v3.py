@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+"""
+Breadth first search approach
+The assumption of consistency of B U C is taken into account first
+
+Run the consistency check on the main thread, if it doesn't exist in the lookup table.
+"""
 import logging
 import multiprocessing as mp
 
@@ -94,6 +100,11 @@ def fd(Δ: list, C: list, B: list) -> list:
 
 
 def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
+    """
+    If the consistency check doesn't exist in the lookup table,
+    we run lookahead on a thread. Besides, we run the consistency check
+    on the main thread.
+    """
     global pool, genhash
 
     BwithC = B + C
@@ -108,7 +119,7 @@ def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
 
         result = checker.is_consistent(BwithC, solver_path)
 
-        lookupTable.update({hashcode: result})
+        # lookupTable.update({hashcode: result})
 
         return result
     else:
