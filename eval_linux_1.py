@@ -10,8 +10,8 @@ from common.utils import prepare_cstrs_sets
 
 
 def main():
-    in_model_filename = "./data/linux.cnf"
-    in_req_filename = "./data/prod_1_1.cnf"
+    in_model_filename = "data/linux/linux.cnf"
+    in_req_filename = "data/linux/prod_1_1.cnf"
 
     fastdiagp_v1.lmax = int(3)
     fastdiagp_v2.lmax = int(3)
