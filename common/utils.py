@@ -3,14 +3,13 @@
 from pysat.formula import CNF
 
 
-def get_hash(C, len_B):
+def get_hashcode(C: list) -> str:
     """
-    Returns the hash of the given CNF formula.
+    Returns the hashcode of the given CNF formula.
     :param C: a list of clauses
-    :param len_B: the number of clauses in the background knowledge
-    :return: the hash of the given CNF formula
+    :return: the hashcode of the given CNF formula
     """
-    C = sorted([i for i in C if i[0] >= len_B], key=lambda x: x[0])
+    C = sorted(C, key=lambda x: x[0])
     return str(C)
 
 
@@ -54,7 +53,7 @@ def prepare_cstrs_sets(in_model_filename: str, in_req_filename: str) -> (list, l
 
     B_cnf = CNF(from_clauses=model_cnf.clauses[0:1])
 
-    B = sorted(enumerate(B_cnf.clauses), key=lambda x: x[0])
-    C = sorted(enumerate(C_cnf.clauses, len(B_cnf.clauses)), key=lambda x: x[0])
+    B = sorted(enumerate(B_cnf.clauses, start=0), key=lambda x: x[0])
+    C = sorted(enumerate(C_cnf.clauses, start=len(B_cnf.clauses)), key=lambda x: x[0])
 
     return B, C

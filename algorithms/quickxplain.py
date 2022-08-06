@@ -6,9 +6,10 @@ from common import utils
 
 logging.basicConfig(level=logging.DEBUG)
 
+solver_path = "solver_apps/choco4solver.jar"
 
 def quickXplain(C, B):
-    if checker.is_consistent(B + C)[0]:
+    if checker.is_consistent(B + C, solver_path)[0]:
         return "No Conflict"
     elif len(C) == 0:
         return []
@@ -17,7 +18,7 @@ def quickXplain(C, B):
 
 
 def QX(C, B, Bo):
-    if len(Bo) != 0 and not checker.is_consistent(B)[0]:
+    if len(Bo) != 0 and not checker.is_consistent(B, solver_path)[0]:
         return []
 
     if len(C) == 1:

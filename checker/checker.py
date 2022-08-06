@@ -6,37 +6,33 @@ import time
 
 from pysat.formula import CNF
 
-import config
-
-gConsistencyCheckCounter = 0
+counter_CC = 0
 
 
-def is_consistent(C: list) -> (bool, float):
+def is_consistent(C: list, solver_path: str) -> (bool, float):
     """
     Check if the given CNF formula is consistent using Choco Solver.
+    :param solver_path: the path to the Choco Solver jar file
     :param C: a list of clauses
     :return: a tuple of two values:
         - a boolean value indicating whether the given CNF formula is consistent
         - the time taken to check the consistency
     """
-    global gConsistencyCheckCounter
+    global counter_CC
 
-    # Create a temporary file for the CNF formula
-    f = tempfile.NamedTemporaryFile()
+    with tempfile.NamedTemporaryFile() as f:  # Create a temporary file for the CNF formula
+        cnf = CNF()
+        for clause in C:
+            cnf.append(clause[1])
+        cnf.to_file(f.name)  # Write the CNF formula to the temporary file
 
-    cnf = CNF()
-    for clause in C:
-        cnf.append(clause[1])
-    cnf.to_file(f.name)  # Write the CNF formula to the temporary file
+        start_time = time.time()
+        with os.popen("java -jar " + solver_path + " " + f.name) as p:
+            counter_CC = counter_CC + 1
+            out = p.read()
 
-    start_time = time.time()
-    p = os.popen("java -jar " + config.solver_path + " " + f.name)  # Run the solver
-    out = p.read()
-    total_time = time.time() - start_time
-
-    f.close()  # close the temporary file
-    p.close()  # close the process
+        total_time = time.time() - start_time
 
     consistent = "UNSATISFIABLE" not in out
-    logging.debug(">>> is_consistent [C={}, consistent={}]".format(C, consistent))
+    logging.debug(">>> is_consistent [consistent={}, C={}]".format(consistent, C))
     return consistent, total_time

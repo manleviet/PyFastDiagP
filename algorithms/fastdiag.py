@@ -26,8 +26,10 @@ import logging
 from checker import checker
 from common import utils
 
+solver_path = "solver_apps/choco4solver.jar"
 
-def fastDiag(C: list, B: list) -> list:
+
+def findDiagnosis(C: list, B: list) -> list:
     """
     Activate FastDiag algorithm if there exists at least one constraint,
     which induces an inconsistency in B. Otherwise, it returns an empty set.
@@ -42,7 +44,7 @@ def fastDiag(C: list, B: list) -> list:
     logging.info("fastDiag [C={}, B={}]".format(C, B))
 
     # if isEmpty(C) or consistent(B U C) return Φ
-    if len(C) == 0 or checker.is_consistent(B + C)[0]:
+    if len(C) == 0 or checker.is_consistent(B + C, solver_path)[0]:
         logging.info("return Φ")
         return []
     else:  # return C \ FD(C, B, Φ)
@@ -74,7 +76,7 @@ def fd(Δ: list, C: list, B: list) -> list:
     logging.debug(">>> FD [Δ={}, C={}, B={}]".format(Δ, C, B))
 
     # if Δ != Φ and consistent(B U C) return C;
-    if len(Δ) != 0 and checker.is_consistent(B + C)[0]:
+    if len(Δ) != 0 and checker.is_consistent(B + C, solver_path)[0]:
         logging.debug("<<< return {}".format(C))
         return C
 
