@@ -23,6 +23,7 @@ currentNumGenCC = 0
 solver_path = "solver_apps/choco4solver.jar"
 
 genhash = ""
+lookaheads = []
 
 
 def findDiagnosis(C: list, B: list) -> list:
@@ -104,13 +105,21 @@ def fd(Δ: list, C: list, B: list) -> list:
 
 
 def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
-    global pool, genhash, currentNumGenCC
+    global pool, genhash, currentNumGenCC, lookaheads
 
     genhash = hashcode = utils.get_hashcode(B + C)
     if not (hashcode in lookupTable):
         currentNumGenCC = 0  # reset the number of generated consistency checks
         lookahead(C, B, [Δ], 0)
         # print("lookahead finished with {} generated CC".format(currentNumGenCC))
+
+        # print("a1-lookaheads:" + str(lookaheads))
+
+        while len(lookaheads) > 0:
+            la = lookaheads.pop(0)
+            # print("a2-lookaheads:" + str(lookaheads))
+            lookahead(la[0], la[1], la[2], la[3])
+            # print("a3-lookaheads:" + str(lookaheads))
 
     return lookup_CC(hashcode)
 
@@ -126,7 +135,7 @@ def lookup_CC(hashcode: str) -> (bool, float):
 
 
 def lookahead(C, B, Δ, level):
-    global lookupTable, pool, genhash, currentNumGenCC
+    global lookupTable, pool, genhash, currentNumGenCC, lookaheads
 
     logging.debug(">>> lookahead [l={}, Δ={}, C={}, B={}]".format(level, Δ, C, B))
 
@@ -144,10 +153,10 @@ def lookahead(C, B, Δ, level):
             future = pool.apply_async(checker.is_consistent, args=([BwithC, solver_path]))
             lookupTable.update({hashcode: future})
 
-            logging.debug(">>> addCC [l={}, C={}]".format(level, hashcode))
+            logging.info(">>> addCC [l={}, C={}]".format(level, hashcode))
 
         # B U C assumed consistent
-        if len(Δ) > 1:  # and len(Δ[0]) == 1:
+        if len(Δ) > 1 and len(Δ[0]) == 1:
             hashcode = utils.get_hashcode(BwithC + Δ[0])
             if hashcode in lookupTable:  # case 2.1
                 Δ2l, Δ2r = utils.split(Δ[1])
@@ -157,14 +166,16 @@ def lookahead(C, B, Δ, level):
                 Δ_prime.insert(0, Δ2r)
 
                 # LookAhead(Δ2l, B U C, Δ2r U (Δ \ {Δ1, Δ2})), l + 1)
-                lookahead(Δ2l, BwithC, Δ_prime, level + 1)
+                # lookahead(Δ2l, BwithC, Δ_prime, level + 1)
+                lookaheads.append((Δ2l, BwithC, Δ_prime, level + 1))
         elif len(Δ) >= 1 and len(Δ[0]) == 1:  # case 2.2
             Δ1 = Δ[0]
             Δ_prime = Δ.copy()
             del Δ_prime[0]
 
             # LookAhead(Δ1, B U C, Δ \ {Δ1}, l + 1)
-            lookahead(Δ1, BwithC, Δ_prime, level + 1)
+            # lookahead(Δ1, BwithC, Δ_prime, level + 1)
+            lookaheads.append((Δ1, BwithC, Δ_prime, level + 1))
         elif len(Δ) >= 1 and len(Δ[0]) > 1:  # case 2.3
             Δ1l, Δ1r = utils.split(Δ[0])
             Δ_prime = Δ.copy()
@@ -172,7 +183,8 @@ def lookahead(C, B, Δ, level):
             Δ_prime.insert(0, Δ1r)
 
             # LookAhead(Δ1l, B U C, Δ1r U (Δ \ {Δ1})), l + 1)
-            lookahead(Δ1l, BwithC, Δ_prime, level + 1)
+            # lookahead(Δ1l, BwithC, Δ_prime, level + 1)
+            lookaheads.append((Δ1l, BwithC, Δ_prime, level + 1))
 
         # B U C assumed inconsistent
         if len(C) > 1:  # case 1.1
@@ -181,14 +193,16 @@ def lookahead(C, B, Δ, level):
             Δ_prime.insert(0, Cr)
 
             # LookAhead(Cl, B, Cr U Δ, l + 1)
-            lookahead(Cl, B, Δ_prime, level + 1)
+            # lookahead(Cl, B, Δ_prime, level + 1)
+            lookaheads.append((Cl, B, Δ_prime, level + 1))
         elif len(C) == 1 and len(Δ) >= 1 and len(Δ[0]) == 1:  # case 1.2
             Δ1 = Δ[0]
             Δ_prime = Δ.copy()
             del Δ_prime[0]
 
             # LookAhead(Δ1, B, Δ \ {Δ1}, l + 1)
-            lookahead(Δ1, B, Δ_prime, level + 1)
+            # lookahead(Δ1, B, Δ_prime, level + 1)
+            lookaheads.append((Δ1, B, Δ_prime, level + 1))
         elif len(C) == 1 and len(Δ) >= 1 and len(Δ[0]) > 1:  # case 1.3
             Δ1l, Δ1r = utils.split(Δ[0])
             Δ_prime = Δ.copy()
@@ -196,4 +210,5 @@ def lookahead(C, B, Δ, level):
             Δ_prime.insert(0, Δ1r)
 
             # LookAhead(Δ1l, B, Δ1r U (Δ \ {Δ1})), l + 1)
-            lookahead(Δ1l, B, Δ_prime, level + 1)
+            # lookahead(Δ1l, B, Δ_prime, level + 1)
+            lookaheads.append((Δ1l, B, Δ_prime, level + 1))

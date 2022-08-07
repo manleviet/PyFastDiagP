@@ -147,7 +147,7 @@ def lookahead(C, B, Δ, level):
             logging.debug(">>> addCC [l={}, C={}]".format(level, hashcode))
 
         # B U C assumed consistent
-        if len(Δ) > 1:  # and len(Δ[0]) == 1:
+        if len(Δ) > 1 and len(Δ[0]) == 1:
             hashcode = utils.get_hashcode(BwithC + Δ[0])
             if hashcode in lookupTable:  # case 2.1
                 Δ2l, Δ2r = utils.split(Δ[1])
