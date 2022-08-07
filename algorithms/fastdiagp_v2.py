@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Breadth first search approach
+Deep first search approach - but right to left
 The assumption of consistency of B U C is taken into account first
 """
 
@@ -136,7 +136,7 @@ def lookahead(C, B, Δ, level):
             future = pool.apply_async(checker.is_consistent, args=([BwithC, solver_path]))
             lookupTable.update({hashcode: future})
 
-            logging.debug(">>> addCC [l={}, C={}]".format(level, hashcode))
+            logging.info(">>> addCC [l={}, C={}]".format(level, hashcode))
 
         # B U C assumed consistent
         if len(Δ) > 1:  # and len(Δ[0]) == 1:

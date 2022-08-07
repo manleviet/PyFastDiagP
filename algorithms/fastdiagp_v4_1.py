@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Deep first search approach - but right to left
+Breadth first search approach
 The assumption of consistency of B U C is taken into account first
 
 Limit the number of generated consistency checks to a fixed number of cores.
@@ -108,7 +108,7 @@ def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
 
     genhash = hashcode = utils.get_hashcode(B + C)
     if not (hashcode in lookupTable):
-        currentNumGenCC = 0 # reset the number of generated consistency checks
+        currentNumGenCC = 0  # reset the number of generated consistency checks
         lookahead(C, B, [Δ], 0)
         # print("lookahead finished with {} generated CC".format(currentNumGenCC))
 
