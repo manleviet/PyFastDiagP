@@ -110,7 +110,7 @@ def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
     if not (hashcode in lookupTable):
         currentNumGenCC = 0
         lookahead(C, B, [Δ], 0)
-        print("lookahead finished with {} generated CC".format(currentNumGenCC))
+        # print("lookahead finished with {} generated CC".format(currentNumGenCC))
 
     return lookup_CC(hashcode)
 

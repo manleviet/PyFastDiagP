@@ -15,11 +15,13 @@ def main():
     if len(sys.argv) > 1:
         in_model_filename = sys.argv[1]
         in_req_filename = sys.argv[2]
-        fastdiagp_v1.lmax = int(sys.argv[3])
+        fastdiagp_v1.solver_path = sys.argv[3]
+        fastdiagp_v1.lmax = int(sys.argv[4])
     else:
         fastdiagp_v1.lmax = int(6)
         in_model_filename = "./data/tests/test_model.cnf"
         in_req_filename = "./data/tests/test_prod_1.cnf"
+        fastdiagp_v1.solver_path = "solver_apps/org.sat4j.core.jar"
 
     B, C = prepare_cstrs_sets(in_model_filename, in_req_filename)
 
@@ -29,7 +31,7 @@ def main():
 
     print(in_req_filename + "|" + str(total_time) + "|" + str(checker.counter_CC)
           + "|" + str(fastdiagp_v1.counter_readyCC) + "|" + str(len(fastdiagp_v1.lookupTable))
-          + "|" + str(fastdiagp_v1.lmax) + "|FastDiagP_V1|" + "|" + str(diag))
+          + "|" + str(fastdiagp_v1.lmax) + "|FastDiagP_V1|" + fastdiagp_v1.solver_path + "|" + str(diag))
 
 
 if __name__ == '__main__':

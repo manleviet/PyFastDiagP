@@ -122,7 +122,7 @@ def is_consistent_with_lookahead(C, B, Δ) -> (bool, float):
         currentNumGenCC = 0 # reset the number of generated consistency checks
         pool.apply_async(lookahead, args=([C, B, [Δ], 0]))
         # lookahead(C, B, [Δ], 0)
-        print("lookahead finished with {} generated CC".format(currentNumGenCC))
+        # print("lookahead finished with {} generated CC".format(currentNumGenCC))
 
         result = checker.is_consistent(BwithC, solver_path)
 
