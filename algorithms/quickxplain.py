@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import logging
+# import logging
 
 from checker import checker
 from common import utils
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 solver_path = "solver_apps/choco4solver.jar"
 
