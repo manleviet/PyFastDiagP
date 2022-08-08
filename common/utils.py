@@ -57,3 +57,15 @@ def prepare_cstrs_sets(in_model_filename: str, in_req_filename: str) -> (list, l
     C = sorted(enumerate(C_cnf.clauses, start=len(B_cnf.clauses)), key=lambda x: x[0])
 
     return B, C
+
+
+def hasIntersection(list1: list, list2: list) -> bool:
+    return any(i in list1 for i in list2)
+
+
+def contains(listofList: list, aList: list) -> bool:
+    return any(aList == x for x in listofList)
+
+
+def containsAll(greater: list, smaller: list) -> bool:
+    return all(i in smaller for i in greater)

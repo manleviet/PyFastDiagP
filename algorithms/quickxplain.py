@@ -10,7 +10,7 @@ solver_path = "solver_apps/choco4solver.jar"
 
 def quickXplain(C, B):
     if checker.is_consistent(B + C, solver_path)[0]:
-        return "No Conflict"
+        return []
     elif len(C) == 0:
         return []
     else:
