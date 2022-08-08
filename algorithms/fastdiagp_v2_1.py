@@ -46,7 +46,7 @@ def findDiagnosis(C: list, B: list) -> list:
         logging.info("return Φ")
         return []
     else:  # return C \ FD(C, B, Φ)
-        pool = mp.Pool(mp.cpu_count())
+        pool = mp.Pool(numCores)
 
         mss = fd([], C, B)
         diag = utils.diff(C, mss)
