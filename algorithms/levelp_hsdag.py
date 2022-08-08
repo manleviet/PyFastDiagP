@@ -1,13 +1,16 @@
 #!/usr/bin/env python
-import logging
 import multiprocessing as mp
+from multiprocessing import Manager
 
 from algorithms import quickxplain
 from common import utils
 
-logging.basicConfig(level=logging.DEBUG)
+# import logging
+
+# logging.basicConfig(level=logging.DEBUG)
 
 solver_path = "solver_apps/choco4solver.jar"
+pool = None
 numCores = mp.cpu_count()
 maxNumGenCC = numCores - 1
 currentNumGenCC = 0
@@ -17,13 +20,14 @@ counter_constructed_nodes = 0
 maxNumberOfDiagnoses = -1
 maxNumberOfConflicts = -1
 
-nodeLabels = []
-pathLabels = []
+manager = Manager()
+nodeLabels = manager.list()
+pathLabels = manager.list()
 
 root = None
-openNodes = []
-label_nodesMap = {}
-nodes_lookup = {}
+openNodes = manager.list()
+label_nodesMap = manager.dict()
+nodes_lookup = manager.dict()
 
 
 def getConflicts():
@@ -35,114 +39,173 @@ def getDiagnoses():
 
 
 def construct(B, C):
+    global pool
+
+    pool = mp.Pool(numCores)
+    # with mp.Manager() as manager:
+    #     nodeLabels = manager.list()
+    #     pathLabels = manager.list()
+    #     openNodes = manager.list()
+    #     label_nodesMap = manager.dict()
+    #     nodes_lookup = manager.dict()
+
     # generate root if there is none
-    if createRoot(B, C):
+    if createRoot(B, C) is not None:
         createNodes()
+
+    pool.close()
+    pool.terminate()
+
+    return pathLabels
 
 
 def createRoot(B, C):
-    global root, openNodes, counter_constructed_nodes
+    global counter_constructed_nodes
+    # global root, openNodes, counter_constructed_nodes
 
-    hasRootLabel = True
+    # hasRootLabel = True
 
-    if not hasRoot():
-        labels = computeLabel(C, B)
+    # if not hasRoot():
+    labels = computeLabel(C, B)
 
-        if len(labels) == 0:
-            hasRootLabel = False
-        else:  # create root node
-            label = selectLabel(labels)
-            root = Node(None, None, B, C)
-            root.label = label
-            counter_constructed_nodes = counter_constructed_nodes + 1
+    if len(labels) == 0:
+        # hasRootLabel = False
+        return None
+    else:  # create root node
+        label = selectLabel(labels)
+        root = Node(None, None, B, C)
+        root.label = label
+        counter_constructed_nodes = counter_constructed_nodes + 1
 
-            openNodes.append(root)
+        openNodes.append(root)
 
-            addNodeLabels(labels)  # to reuse labels
-            addItemToLabelNodesMap(label, root)
+        addNodeLabels(labels)  # to reuse labels
+        addItemToLabelNodesMap(label, root)
 
-            # log.debug("{}(HSTree-construct) Created root node [root={}]", LoggerUtils.tab(), root);
-    return hasRootLabel
+        # log.debug("{}(HSTree-construct) Created root node [root={}]", LoggerUtils.tab(), root);
+        return root
 
 
 def createNodes():
-    while hasNodesToExpand():
-        node = getNextNode()
+    global counter_constructed_nodes
+    while True:
+        workers = []
 
-        if not node.isRoot():
-            if skipNode(node):
-                continue
+        while hasNodesToExpand():
+            node = getNextNode()
 
-            # log.debug("{}(HSTree-createNodes) Processing [node={}]", LoggerUtils.tab(), node);
-            # LoggerUtils.indent();
+            if node.status == "Open":
 
-            label(node)
+                for arcLabel in node.label:
+                    counter_constructed_nodes = counter_constructed_nodes + 1
+                    B, C = node.create_parameter(arcLabel)
 
-            if shouldStopConstruction():
-                # LoggerUtils.outdent();
-                break
+                    worker = pool.apply_async(expand, args=(node, arcLabel, B, C))
+                    workers.append(worker)
 
-        if node.status == "Open":
-            expand(node)
+        for worker in workers:
+            newNode = worker.get()
 
-        # if not node.isRoot():
-        # LoggerUtils.outdent();
+            if newNode is not None:
+                openNodes.append(newNode)
+                # log.debug("{}(HSTree-createNodes) Created [node={}]", LoggerUtils.tab(), newNode);
 
+                if shouldStopConstruction():
+                    # LoggerUtils.outdent();
+                    # Utils.shutdownAndAwaitTermination(threadPool, "threadPool");
+                    openNodes.clear()
+                    break
 
-def label(node):
-    # Reusing labels - H(node) ∩ S = {}, then label node by S
-    labels = getReusableLabels(node)
+        workers.clear()
 
-    # compute labels if there are none to reuse
-    if len(labels) == 0:
-        labels = computeLabel(node.C, node.B)
-
-        processLabels(labels)
-
-    if len(labels) > 0 and len(labels[0]) > 0:
-        label = selectLabel(labels)
-
-        node.label = label
-        addItemToLabelNodesMap(label, node)
-
-        # log.debug("{}(HSTree-label) Node [node={}] has label [label={}]", LoggerUtils.tab(), node, label);
-    else:  # found a path label
-        foundAPathLabelAtNode(node)
+        if not hasNodesToExpand():
+            break
 
 
-def expand(nodeToExpand):
-    global counter_constructed_nodes, openNodes
+# def label(node):
+#     # Reusing labels - H(node) ∩ S = {}, then label node by S
+#     labels = getReusableLabels(node)
+#
+#     # compute labels if there are none to reuse
+#     if len(labels) == 0:
+#         labels = computeLabel(node.C, node.B)
+#
+#         processLabels(labels)
+#
+#     if len(labels) > 0 and len(labels[0]) > 0:
+#         label = selectLabel(labels)
+#
+#         node.label = label
+#         addItemToLabelNodesMap(label, node)
+#
+#         # log.debug("{}(HSTree-label) Node [node={}] has label [label={}]", LoggerUtils.tab(), node, label);
+#     else:  # found a path label
+#         foundAPathLabelAtNode(node)
+
+
+def expand(nodeToExpand, arcLabel, B, C):
+    global counter_constructed_nodes
     # log.debug("{}(HSTree-expand) Generating the children nodes of [node={}]", LoggerUtils.tab(), nodeToExpand);
     # LoggerUtils.indent();
 
-    for arcLabel in nodeToExpand.label:
-        B, C = nodeToExpand.create_parameter(arcLabel)
+    # rule 1.a - reuse node
+    node = getReusableNode(nodeToExpand.pathLabel, arcLabel)
+    if node is not None:
+        node.addParent(nodeToExpand)
+    else:  # rule 1.b - generate a new node
+        node = Node(nodeToExpand, arcLabel, B, C)
+        nodes_lookup[utils.get_hashcode(node.pathLabel)] = node
 
-        # rule 1.a - reuse node
-        node = getReusableNode(nodeToExpand.pathLabel, arcLabel)
-        if node is not None:
-            node.addparent(nodeToExpand)
-        else:  # rule 1.b - generate a new node
-            node = Node(nodeToExpand, arcLabel, B, C)
-            nodes_lookup[utils.get_hashcode(node.pathLabel)] = node
-            counter_constructed_nodes = counter_constructed_nodes + 1
+        if canPrune(node):
+            return None
+        else:
+            # label(nodeToExpand)
+            # openNodes.append(node)
+            # log.debug("{}(HSTree-expand) Created [node={}]", LoggerUtils.tab(), node);
+            # Reusing labels - H(node) ∩ S = {}, then label node by S
+            labels = getReusableLabels(node)
 
-            if not canPrune(node):
-                openNodes.append(node)
-                # log.debug("{}(HSTree-expand) Created [node={}]", LoggerUtils.tab(), node);
+            # compute labels if there are none to reuse
+            if len(labels) == 0:
+                labels = computeLabel(node.C, node.B)
+
+                processLabels(labels)
+
+            if len(labels) > 0 and len(labels[0]) > 0:
+                label = selectLabel(labels)
+
+                node.label = label
+                addItemToLabelNodesMap(label, node)
+
+                # log.debug("{}(HSTree-label) Node [node={}] has label [label={}]", LoggerUtils.tab(), node, label);
+            else:  # found a path label
+                if not containNodeLabel(node.pathLabel):
+                    foundAPathLabelAtNode(node)
+                else:
+                    node.status = "Checked"
+
+    return node
+
+
+def containNodeLabel(pathLabel):
+    for label in nodeLabels:
+        if len(label) > 1 and utils.containsAll(pathLabel, label):
+            return True
+    return False
+    # return nodeLabels.parallelStream().filter(nodeLabel -> nodeLabel.size() > 1).anyMatch(pathLabel::containsAll)
 
 
 def shouldStopConstruction():
     # when the number of already identified diagnoses is greater than the limit, stop the computation
-    condition1 = (maxNumberOfDiagnoses != -1 and maxNumberOfDiagnoses <= len(getDiagnoses()))
+    condition1 = (maxNumberOfDiagnoses != -1 and maxNumberOfDiagnoses <= len(pathLabels))
     # OR when the number of already identified conflicts is greater than the limit, stop the computation
-    condition2 = (maxNumberOfConflicts != -1 and maxNumberOfConflicts <= len(getConflicts()))
+    condition2 = (maxNumberOfConflicts != -1 and maxNumberOfConflicts <= len(nodeLabels))
 
     return condition1 or condition2
 
 
 def addItemToLabelNodesMap(label, node):
-    global label_nodesMap
+    # global label_nodesMap
 
     hashcode = utils.get_hashcode(label)
     if hashcode in label_nodesMap:
@@ -156,7 +219,7 @@ def computeLabel(C, B):
 
 
 def addNodeLabels(labels):
-    global nodeLabels
+    # global nodeLabels
     for label in labels:
         nodeLabels.append(label.copy())
 
@@ -169,7 +232,7 @@ def foundAPathLabelAtNode(node):
 
 
 def addPathLabel(pathLabel):
-    global pathLabels
+    # global pathLabels
     pathLabels.append(pathLabel)
 
 
@@ -182,7 +245,7 @@ def hasNodesToExpand():
 
 
 def getNextNode():
-    global openNodes
+    # global openNodes
     if len(openNodes) > 0:
         return openNodes.pop(0)
     else:
@@ -288,16 +351,16 @@ def getReusableLabels(node: Node):
     return labels
 
 
-def getReusableNode(pathLabels, arcLabel):
-    global nodes_lookup
-    h = pathLabels.copy()
+def getReusableNode(pathLabel, arcLabel):
+    # global nodes_lookup
+    h = pathLabel.copy()
     h.append(arcLabel)
     hashcode = utils.get_hashcode(h)
     return nodes_lookup.get(hashcode)
 
 
 def processLabels(labels):
-    global nodeLabels, label_nodesMap
+    # global label_nodesMap
     if len(labels) > 0 and len(labels[0]) > 0:
         # stop(TIMER_NODE_LABEL);
         # check existing and obtained labels for subset-relations
@@ -359,7 +422,7 @@ def processLabels(labels):
 
 
 def cleanUpNodes(node):
-    global nodes_lookup
+    # global nodes_lookup
     hashcode = utils.get_hashcode(node.pathLabel)
     del nodes_lookup[hashcode]
     # log.debug("{}(HSDAGPruningEngine-cleanUpNodes) removed pathLabel from nodesLookup [pathLabel={}]", LoggerUtils.tab(), node.getPathLabel());
