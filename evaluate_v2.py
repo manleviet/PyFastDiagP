@@ -5,7 +5,7 @@ import time
 
 # logging.config.fileConfig('logging.conf')
 
-cards = ["1", "2", "4", "8", "16"]
+cards = ["8", "16"]  # "1", "2", "4",
 # lmaxs = ["0"]  # , "1", "2", "3", "4", "5"]
 cores = ["2", "4", "6", "8"]
 numScenarios = 10

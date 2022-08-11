@@ -17,7 +17,7 @@ counter_readyCC = 0
 lmax = 4
 pool = None
 numCores = mp.cpu_count()
-maxNumGenCC = numCores - 1
+maxNumGenCC = numCores  # - 1
 currentNumGenCC = 0
 
 solver_path = "solver_apps/choco4solver.jar"
@@ -79,9 +79,17 @@ def fd(Δ: list, C: list, B: list) -> list:
     logging.debug(">>> FD [Δ={}, C={}, B={}]".format(Δ, C, B))
 
     # if Δ != Φ and consistent(B U C) return C;
-    if len(Δ) != 0 and is_consistent_with_lookahead(C, B, Δ)[0]:
-        logging.debug("<<< return {}".format(C))
-        return C
+    # if len(Δ) != 0 and is_consistent_with_lookahead(C, B, Δ)[0]:
+    if len(Δ) != 0:
+        BwithC = B + C
+        if len(BwithC) > 4:
+            if checker.is_consistent(BwithC, solver_path)[0]:
+                logging.debug("return C")
+                return C
+        else:
+            if is_consistent_with_lookahead(C, B, Δ)[0]:
+                logging.debug("<<< return {}".format(C))
+                return C
 
     # if singleton(C) return Φ;
     if len(C) == 1:
